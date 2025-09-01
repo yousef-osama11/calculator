@@ -89,7 +89,12 @@ class MainActivity : AppCompatActivity() {
                     tokens.add(number)
                     number = ""
                 }
-                tokens.add(ch.toString())
+                if (ch == '%') {
+                    val lastIndex = tokens.lastIndex
+                    tokens[lastIndex] = (tokens[lastIndex].toDouble() / 100).toString()
+                } else {
+                    tokens.add(ch.toString())
+                }
             }
         }
         if (number.isNotEmpty()) tokens.add(number)
@@ -147,7 +152,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun onClickOperation() {
-        if (currentText.last() == '+' || currentText.last() == '-' || currentText.last() == 'x' || currentText.last() == '/' || currentText.last() == '%') {
+        if (currentText.last() == '+' || currentText.last() == '-' || currentText.last() == 'x' || currentText.last() == '/') {
             currentText = currentText.dropLast(1)
         }
         currentText = currentText + currentOperation.value
