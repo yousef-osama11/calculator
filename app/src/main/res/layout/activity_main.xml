@@ -60,7 +60,7 @@
             android:id="@+id/miniBar"
             android:layout_width="32dp"
             android:layout_height="4dp"
-            android:background="@color/miniBar"
+            android:background="@drawable/mini_bar"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintBottom_toBottomOf="@id/curvedLayout"
