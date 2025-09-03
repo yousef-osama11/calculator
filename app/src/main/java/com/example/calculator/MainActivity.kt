@@ -14,6 +14,9 @@ class MainActivity : AppCompatActivity() {
     var currentText: String = "0"
     var currentOperation: Operation = Operation.Plus
 
+    var enableErase: Boolean = true
+    var availableDeletedCharactersNumber: Int = 0
+
     override fun onCreate(savedInstanceState: Bundle?) {
         binding = ActivityMainBinding.inflate(layoutInflater)
         super.onCreate(savedInstanceState)
@@ -41,15 +44,21 @@ class MainActivity : AppCompatActivity() {
             onClickOperation()
         }
         binding.allClear.setOnClickListener {
+            availableDeletedCharactersNumber = 0
             clearResult()
         }
         binding.erase.setOnClickListener {
-            deleteLastDigit()
+            if (availableDeletedCharactersNumber > 0){
+                availableDeletedCharactersNumber -=1
+                deleteLastDigit()
+            }
         }
         binding.buttonEqual.setOnClickListener {
+            availableDeletedCharactersNumber = 0
             doCalculation()
         }
         binding.plusMinus.setOnClickListener {
+            availableDeletedCharactersNumber +=1
             onClickRevertSignButton()
         }
         binding.percent.setOnClickListener {
@@ -66,10 +75,15 @@ class MainActivity : AppCompatActivity() {
             var result = calculateExpression(currentText).toString()
             if (result.endsWith(".0"))
                 result = result.dropLast(2)
+            if (result.equals("NaN")){
+                result = "Error"
+            }
             binding.mainText.text = result
             if (currentText.startsWith("0-")) {
                 currentText = currentText.drop(1)
             }
+            if (currentText.endsWith("."))
+                currentText = currentText.dropLast(1)
             binding.subText.text = currentText
             currentText = result
         } catch (e: Exception) {
@@ -80,6 +94,9 @@ class MainActivity : AppCompatActivity() {
     private fun calculateExpression(expression: String): Double {
         val tokens = mutableListOf<String>()
         var number = ""
+        if (expression.first() == '.') {
+            number += '0'
+        }
 
         for (ch in expression) {
             if (ch.isDigit() || ch == '.') {
@@ -152,6 +169,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun onClickOperation() {
+        availableDeletedCharactersNumber +=1
         if (currentText.last() == '+' || currentText.last() == '-' || currentText.last() == 'x' || currentText.last() == '/') {
             currentText = currentText.dropLast(1)
         }
@@ -170,6 +188,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun onClickNumber(view: View) {
+        availableDeletedCharactersNumber +=1
         if (binding.mainText.text.toString().equals("0")) {
             binding.mainText.text = ""
         }
