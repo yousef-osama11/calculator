@@ -44,16 +44,22 @@ class MainActivity : AppCompatActivity() {
             onClickOperation()
         }
         binding.allClear.setOnClickListener {
+            enableErase = false
             availableDeletedCharactersNumber = 0
             clearResult()
         }
         binding.erase.setOnClickListener {
-            if (availableDeletedCharactersNumber > 0){
+            if (currentText.equals("Error") || binding.mainText.text.equals("Error")) {
+                currentText = "0"
+                binding.mainText.text = currentText
+            }
+            else if (enableErase){
                 availableDeletedCharactersNumber -=1
                 deleteLastDigit()
             }
         }
         binding.buttonEqual.setOnClickListener {
+            enableErase = false
             availableDeletedCharactersNumber = 0
             doCalculation()
         }
@@ -75,8 +81,8 @@ class MainActivity : AppCompatActivity() {
             var result = calculateExpression(currentText).toString()
             if (result.endsWith(".0"))
                 result = result.dropLast(2)
-            if (result.equals("NaN")){
-                result = "Error"
+            if (result.equals("NaN") || result.equals("Infinity") || result.equals("-Infinity")) {
+                result = "0"
             }
             binding.mainText.text = result
             if (currentText.startsWith("0-")) {
@@ -92,13 +98,15 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun calculateExpression(expression: String): Double {
+        val modifiedExpression = expression.replace(" ", "")
         val tokens = mutableListOf<String>()
         var number = ""
-        if (expression.first() == '.') {
+
+        if (modifiedExpression.first() == '.') {
             number += '0'
         }
 
-        for (ch in expression) {
+        for ((index, ch) in modifiedExpression.withIndex()) {
             if (ch.isDigit() || ch == '.') {
                 number += ch
             } else {
@@ -108,7 +116,15 @@ class MainActivity : AppCompatActivity() {
                 }
                 if (ch == '%') {
                     val lastIndex = tokens.lastIndex
-                    tokens[lastIndex] = (tokens[lastIndex].toDouble() / 100).toString()
+                    val percentValue = tokens[lastIndex].toDouble()
+
+                    val nextOp = if (index + 1 < modifiedExpression.length) modifiedExpression[index + 1] else null
+
+                    if (nextOp == 'x' || nextOp == '/' || (lastIndex > 0 && (tokens[lastIndex - 1] == "x" || tokens[lastIndex - 1] == "/"))) {
+                        tokens[lastIndex] = (percentValue / 100).toString()
+                    } else {
+                        tokens[lastIndex] = (percentValue).toString() + "%"
+                    }
                 } else {
                     tokens.add(ch.toString())
                 }
@@ -118,13 +134,19 @@ class MainActivity : AppCompatActivity() {
 
         var i = 0
         while (i < tokens.size) {
-            if (tokens[i] == "x" || tokens[i] == "/" || tokens[i] == "%") {
-                val left = tokens[i - 1].toDouble()
-                val right = tokens[i + 1].toDouble()
+            if (tokens[i] == "x" || tokens[i] == "/") {
+                val left = tokens[i - 1].let {
+                    if (it.endsWith("%")) (tokens[i - 2].toDouble() * (it.dropLast(1).toDouble() / 100)).toString()
+                    else it
+                }.toDouble()
+
+                val right = tokens[i + 1].let {
+                    if (it.endsWith("%")) (it.dropLast(1).toDouble() / 100) else it.toDouble()
+                }
+
                 val result = when (tokens[i]) {
                     "x" -> left * right
                     "/" -> left / right
-                    "%" -> left % right
                     else -> 0.0
                 }
                 tokens[i - 1] = result.toString()
@@ -139,17 +161,21 @@ class MainActivity : AppCompatActivity() {
         i = 1
         while (i < tokens.size) {
             val op = tokens[i]
-            val next = tokens[i + 1].toDouble()
+            var next = tokens[i + 1]
+            if (next.endsWith("%")) {
+                val perc = next.dropLast(1).toDouble()
+                next = (result * (perc / 100)).toString()
+            }
+            val nextVal = next.toDouble()
             when (op) {
-                "+" -> result += next
-                "-" -> result -= next
+                "+" -> result += nextVal
+                "-" -> result -= nextVal
             }
             i += 2
         }
 
         return result
     }
-
     private fun clearResult() {
         binding.mainText.text = "0"
         binding.subText.text = ""
@@ -168,12 +194,23 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun fixCurrentText(){
+        if (currentText.equals("Error") || binding.mainText.text.equals("Error")) {
+            currentText = "0"
+            binding.mainText.text = currentText
+        }
+    }
+
     private fun onClickOperation() {
-        availableDeletedCharactersNumber +=1
+        fixCurrentText()
+        enableErase = true
+        availableDeletedCharactersNumber +=3
         if (currentText.last() == '+' || currentText.last() == '-' || currentText.last() == 'x' || currentText.last() == '/') {
             currentText = currentText.dropLast(1)
         }
-        currentText = currentText + currentOperation.value
+        if (!currentOperation.value.equals("%"))
+            currentText = currentText + " " + currentOperation.value + " "
+        else currentText = currentText + currentOperation.value
         binding.mainText.text = currentText
     }
 
@@ -188,6 +225,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun onClickNumber(view: View) {
+        fixCurrentText()
+        enableErase = true
         availableDeletedCharactersNumber +=1
         if (binding.mainText.text.toString().equals("0")) {
             binding.mainText.text = ""
